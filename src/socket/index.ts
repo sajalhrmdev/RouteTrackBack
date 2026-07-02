@@ -7,6 +7,7 @@ import { logger } from '../config/logger';
 import { employeeRepository } from '../repositories/employee.repository';
 import { attendanceRepository } from '../repositories/attendance.repository';
 import { gpsRepository } from '../repositories/gps.repository';
+import { liveLocationRepository } from '../repositories/live-location.repository';
 import { resolveEmployeeId, calculateDistance } from '../utils/helpers';
 
 let io: Server;
@@ -113,6 +114,21 @@ export function initializeSocket(httpServer: HttpServer): Server {
               totalDistance: { increment: newDistance },
             });
           }
+
+          await liveLocationRepository.upsert(
+            empId,
+            user.companyId,
+            activeAttendance.id,
+            {
+              latitude: data.latitude,
+              longitude: data.longitude,
+              accuracy: data.accuracy,
+              speed: data.speed,
+              heading: data.heading,
+              batteryLevel: data.batteryLevel,
+              timestamp: new Date(),
+            }
+          );
 
           io.to(`company:${user.companyId}`).emit('locationUpdate', {
             employeeId: empId,

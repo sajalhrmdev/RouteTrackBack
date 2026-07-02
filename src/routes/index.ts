@@ -7,6 +7,7 @@ import departmentRoutes from './department.routes';
 import designationRoutes from './designation.routes';
 import dashboardRoutes from './dashboard.routes';
 import notificationRoutes from './notification.routes';
+import liveLocationRoutes from './live-location.routes';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.use('/departments', departmentRoutes);
 router.use('/designations', designationRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/live-locations', liveLocationRoutes);
 
 router.get('/health', (_req, res) => {
   res.json({

@@ -1,6 +1,7 @@
 import { attendanceRepository } from '../repositories/attendance.repository';
 import { gpsRepository } from '../repositories/gps.repository';
 import { employeeRepository } from '../repositories/employee.repository';
+import { liveLocationRepository } from '../repositories/live-location.repository';
 import { AppError, NotFoundError } from '../utils/errors';
 import { getPaginationParams } from '../utils/helpers';
 import { CheckInInput, CheckOutInput } from '../validations/attendance';
@@ -66,6 +67,8 @@ export class AttendanceService {
       accuracy: data.accuracy,
       timestamp: new Date(),
     });
+
+    await liveLocationRepository.deleteByEmployeeId(employeeId, companyId);
 
     return attendanceRepository.findById(activeAttendance.id, companyId);
   }

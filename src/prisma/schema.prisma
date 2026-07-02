@@ -42,6 +42,7 @@ model Company {
   employees     Employee[]
   attendances   Attendance[]
   gpsLocations  GpsLocation[]
+  liveLocations LiveLocation[]
   notifications Notification[]
 }
 
@@ -87,6 +88,7 @@ model Employee {
   subordinates     Employee[]    @relation("EmployeeManager")
   attendances      Attendance[]
   gpsLocations     GpsLocation[]
+  liveLocation     LiveLocation?
 
   @@index([companyId])
   @@index([employeeId])
@@ -147,6 +149,7 @@ model Attendance {
   company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employee   Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   gpsRecords GpsLocation[] @relation("AttendanceGps")
+  liveLocation LiveLocation?
 
   @@index([companyId])
   @@index([employeeId])
@@ -176,6 +179,29 @@ model GpsLocation {
   @@index([employeeId])
   @@index([attendanceId])
   @@index([timestamp])
+}
+
+model LiveLocation {
+  id          String   @id @default(uuid())
+  companyId   String
+  employeeId  String   @unique
+  attendanceId String  @unique
+  latitude    Float
+  longitude   Float
+  accuracy    Float?
+  speed       Float?
+  heading     Float?
+  batteryLevel Float?
+  timestamp   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee   Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  attendance Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([employeeId])
 }
 
 model Notification {

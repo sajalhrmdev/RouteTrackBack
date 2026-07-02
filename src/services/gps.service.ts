@@ -1,5 +1,6 @@
 import { gpsRepository } from '../repositories/gps.repository';
 import { attendanceRepository } from '../repositories/attendance.repository';
+import { liveLocationRepository } from '../repositories/live-location.repository';
 import { GpsLocationInput } from '../validations/attendance';
 import { calculateDistance } from '../utils/helpers';
 import { getIO } from '../socket';
@@ -60,6 +61,21 @@ export class GpsService {
       // Socket not available
     }
 
+    await liveLocationRepository.upsert(
+      employeeId,
+      companyId,
+      activeAttendance.id,
+      {
+        latitude: data.latitude,
+        longitude: data.longitude,
+        accuracy: data.accuracy,
+        speed: data.speed,
+        heading: data.heading,
+        batteryLevel: data.batteryLevel,
+        timestamp: location.timestamp,
+      }
+    );
+
     return location;
   }
 
@@ -86,6 +102,24 @@ export class GpsService {
     }));
 
     await gpsRepository.createMany(data);
+
+    const lastLoc = data[data.length - 1];
+    if (lastLoc) {
+      await liveLocationRepository.upsert(
+        employeeId,
+        companyId,
+        activeAttendance.id,
+        {
+          latitude: lastLoc.latitude,
+          longitude: lastLoc.longitude,
+          accuracy: lastLoc.accuracy,
+          speed: lastLoc.speed,
+          heading: lastLoc.heading,
+          batteryLevel: lastLoc.batteryLevel,
+          timestamp: lastLoc.timestamp,
+        }
+      );
+    }
   }
 
   async getRouteHistory(employeeId: string, date: string, companyId: string) {
