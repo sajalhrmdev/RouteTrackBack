@@ -24,7 +24,7 @@ export class AttendanceService {
       status: 'CHECKED_IN',
     });
 
-    await employeeRepository.update(employeeId, companyId, { isOnline: true });
+    await employeeRepository.update(employeeId, companyId, { isOnline: true, lastLocationAt: new Date() });
 
     await gpsRepository.create({
       employeeId,

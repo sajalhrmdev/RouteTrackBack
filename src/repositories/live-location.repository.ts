@@ -57,6 +57,7 @@ export class LiveLocationRepository {
             department: { select: { name: true } },
             designation: { select: { name: true } },
             isOnline: true,
+            lastLocationAt: true,
           },
         },
         attendance: {

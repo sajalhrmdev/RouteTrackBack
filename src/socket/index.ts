@@ -11,6 +11,7 @@ import { liveLocationRepository } from '../repositories/live-location.repository
 import { resolveEmployeeId, calculateDistance } from '../utils/helpers';
 
 let io: Server;
+const lastGpsUpdate = new Map<string, number>();
 
 export function initializeSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
@@ -48,16 +49,6 @@ export function initializeSocket(httpServer: HttpServer): Server {
     const empId = await resolveEmployeeId(user.userId, user.companyId);
     (socket as any).empId = empId;
 
-    if (empId) {
-      await employeeRepository.update(empId, user.companyId, { isOnline: true });
-
-      io.to(`company:${user.companyId}`).emit('employeeStatus', {
-        employeeId: empId,
-        companyId: user.companyId,
-        isOnline: true,
-      });
-    }
-
     socket.on('joinAttendance', (attendanceId: string) => {
       socket.join(`attendance:${attendanceId}`);
     });
@@ -87,6 +78,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
           const lastLocation = await gpsRepository.getLastLocation(empId, user.companyId);
 
           let newDistance = 0;
+          let shouldSave = true;
           if (lastLocation) {
             newDistance = calculateDistance(
               lastLocation.latitude,
@@ -94,25 +86,28 @@ export function initializeSocket(httpServer: HttpServer): Server {
               data.latitude,
               data.longitude
             );
+            if (newDistance < 5) shouldSave = false;
           }
 
-          await gpsRepository.create({
-            employeeId: empId,
-            companyId: user.companyId,
-            attendanceId: activeAttendance.id,
-            latitude: data.latitude,
-            longitude: data.longitude,
-            accuracy: data.accuracy,
-            speed: data.speed,
-            heading: data.heading,
-            batteryLevel: data.batteryLevel,
-            timestamp: new Date(),
-          });
-
-          if (newDistance > 0) {
-            await attendanceRepository.update(activeAttendance.id, user.companyId, {
-              totalDistance: { increment: newDistance },
+          if (shouldSave) {
+            await gpsRepository.create({
+              employeeId: empId,
+              companyId: user.companyId,
+              attendanceId: activeAttendance.id,
+              latitude: data.latitude,
+              longitude: data.longitude,
+              accuracy: data.accuracy,
+              speed: data.speed,
+              heading: data.heading,
+              batteryLevel: data.batteryLevel,
+              timestamp: new Date(),
             });
+
+            if (newDistance > 0) {
+              await attendanceRepository.update(activeAttendance.id, user.companyId, {
+                totalDistance: { increment: newDistance },
+              });
+            }
           }
 
           await liveLocationRepository.upsert(
@@ -129,6 +124,12 @@ export function initializeSocket(httpServer: HttpServer): Server {
               timestamp: new Date(),
             }
           );
+
+          const nowMs = Date.now();
+          if (!lastGpsUpdate.get(empId) || nowMs - lastGpsUpdate.get(empId)! > 30000) {
+            lastGpsUpdate.set(empId, nowMs);
+            await employeeRepository.update(empId, user.companyId, { lastLocationAt: new Date() });
+          }
 
           io.to(`company:${user.companyId}`).emit('locationUpdate', {
             employeeId: empId,
@@ -149,16 +150,6 @@ export function initializeSocket(httpServer: HttpServer): Server {
 
     socket.on('disconnect', async () => {
       logger.info(`Socket disconnected: ${user.userId}`);
-      const empId = (socket as any).empId;
-      if (empId) {
-        await employeeRepository.update(empId, user.companyId, { isOnline: false });
-
-        io.to(`company:${user.companyId}`).emit('employeeStatus', {
-          employeeId: empId,
-          companyId: user.companyId,
-          isOnline: false,
-        });
-      }
     });
   });
 

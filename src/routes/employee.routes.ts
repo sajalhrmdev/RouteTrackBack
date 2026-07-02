@@ -9,7 +9,6 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', getAll);
-router.get('/me', getById);
 router.get('/stats', getStats);
 router.get('/:id', getById);
 router.post('/', authorize('COMPANY_ADMIN', 'MANAGER'), validate(createEmployeeSchema), create);

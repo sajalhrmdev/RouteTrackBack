@@ -22,9 +22,10 @@ export class CompanyRepository {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const fiveMinAgo = new Date(Date.now() - 300000);
     const [totalEmployees, onlineCount, todayAttendance, totalDistanceResult, avgHoursResult] = await Promise.all([
       prisma.employee.count({ where: { companyId, status: 'ACTIVE' } }),
-      prisma.employee.count({ where: { companyId, isOnline: true } }),
+      prisma.employee.count({ where: { companyId, isOnline: true, lastLocationAt: { gte: fiveMinAgo } } }),
       prisma.attendance.count({
         where: {
           companyId,
