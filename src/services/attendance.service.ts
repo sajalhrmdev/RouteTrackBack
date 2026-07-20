@@ -11,7 +11,18 @@ export class AttendanceService {
   async checkIn(employeeId: string, companyId: string, data: CheckInInput) {
     const activeAttendance = await attendanceRepository.findActiveAttendance(employeeId, companyId);
     if (activeAttendance) {
-      throw new AppError('Already checked in. Please check out first.', 400);
+      const hoursSinceCheckIn = (Date.now() - activeAttendance.checkInTime.getTime()) / 3600000;
+      if (hoursSinceCheckIn >= 12) {
+        const workingTime = Math.floor((Date.now() - activeAttendance.checkInTime.getTime()) / 1000);
+        await attendanceRepository.update(activeAttendance.id, companyId, {
+          checkOutTime: new Date(),
+          status: 'CHECKED_OUT',
+          totalWorkingTime: activeAttendance.totalWorkingTime + workingTime,
+        });
+        await liveLocationRepository.deleteByEmployeeId(employeeId, companyId);
+      } else {
+        throw new AppError('Already checked in. Please check out first.', 400);
+      }
     }
 
     const attendance = await attendanceRepository.create({
